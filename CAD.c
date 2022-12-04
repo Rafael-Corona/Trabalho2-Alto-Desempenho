@@ -39,7 +39,6 @@ long caminho(int ** graph, int* visitados, int* melhor_caminho, const int n, con
 		return graph[pos][posicao_inicial];
 	}
 
-	long dist = 0;
 	long min_dist = LONG_MAX;
 	int min_pos = -1;
 	int* melhor_caminho_local = (int*)malloc(sizeof(int) * n);
