@@ -8,6 +8,8 @@
 #define ROOT 0
 #define min(a,b) (a) > (b) ? (b) : (a);
 
+
+
 void copia_arr(int* dest, int* src, int n)
 {
 	for (int i = 0; i < n; i++)
@@ -35,7 +37,19 @@ void funcao_geradora(int** graph, int n)
 	return;
 }
 
-long caminho(int ** graph, int* visitados, int* melhor_caminho, const int n, const int vertice, const int posicao_caminho, const int posicao_inicial)
+int** cria_grafo(int n) {
+	int** graph = (int**)malloc(sizeof(int*) * n);
+	for (int i = 0; i < n; i++)
+	{
+		graph[i] = (int*)malloc(sizeof(int) * n);
+	}
+
+	funcao_geradora(graph, n);
+
+	return graph;
+}
+
+long caminho(int** graph, int* visitados, int* melhor_caminho, const int n, const int vertice, const int posicao_caminho, const int posicao_inicial)
 {
 	if (posicao_caminho+1 == n)
 	{
@@ -69,6 +83,8 @@ long caminho(int ** graph, int* visitados, int* melhor_caminho, const int n, con
 		}
 	}
 
+	free(melhor_caminho_local);
+
 	if (min_pos == -1)
 	{
 		printf("Erro\n");
@@ -76,37 +92,19 @@ long caminho(int ** graph, int* visitados, int* melhor_caminho, const int n, con
 	return min_dist;
 }
 
-int main(int argc, char const *argv[])
+int main(int argc, char *argv[])
 {
     int n = 11, rank, n_proc;
+	int** graph = cria_grafo(n);
+	long menor_caminho_dist;
+	int* melhor_caminho;
 	MPI_Status status;
-	srand(12345);
-	
-	int** graph = (int**)malloc(sizeof(int*) * n);
-	for (int i = 0; i < n; i++)
-	{
-		graph[i] = (int*)malloc(sizeof(int) * n);
-	}
 
-	funcao_geradora(graph, n);
-
-	int* visitados = (int*)malloc(sizeof(int) * n);
-	int* melhor_caminho = (int*)malloc(sizeof(int) * n);
-	long menor_caminho_dist = 0;
-
-	for (int i = 0; i < n; i++)
-	{
-		visitados[i] = 0;
-		melhor_caminho[i] = 0;
-	}
-
-	visitados[0] = 1;
-
-	MPI_Init(&argc, (char***) &argv);
+	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &n_proc);
 	
-	int block_size = (n - 1)/n_proc;
+	int block_size = n/n_proc;
 	long local_menor_caminho_dist = LONG_MAX;
 	int vertice_inicial = rank*block_size;
 	int vertice_final = vertice_inicial + block_size;
@@ -127,25 +125,20 @@ int main(int argc, char const *argv[])
 	}
 
 	for (int i = vertice_inicial; i < vertice_final; i++) {
-		local_visitados[i] = 1;
-		local_melhor_caminho_tmp[0] = i;
-		for (int vertice = 0; vertice < n; vertice++) {
-			
-			if (!local_visitados[vertice] && vertice != i) {
-				local_visitados[vertice] = 1;
-				temp_menor_dist = caminho(graph, local_visitados, local_melhor_caminho_tmp, n, vertice, 2, 0) + graph[i][vertice] + graph[0][i];
-				if (temp_menor_dist < local_menor_caminho_dist)
-				{
-					copia_arr(local_melhor_caminho, local_melhor_caminho_tmp, n);
-					
-					local_menor_caminho_dist = temp_menor_dist;
-					min_pos = vertice;
-					local_melhor_caminho[1] = vertice;
-				}
-				local_visitados[vertice] = 0;
+		if (i != 0) {
+			local_visitados[i] = 1;
+			local_melhor_caminho_tmp[0] = i;
+
+			temp_menor_dist = caminho(graph, local_visitados, local_melhor_caminho_tmp, n, i, 1, 0) + graph[0][i];
+			if(temp_menor_dist < local_menor_caminho_dist) {
+				copia_arr(local_melhor_caminho, local_melhor_caminho_tmp, n);
+						
+				local_menor_caminho_dist = temp_menor_dist;
+				min_pos = i;
+				local_melhor_caminho[0] = i;
 			}
+			local_visitados[i] = 0;
 		}
-		local_visitados[i] = 0;
 	}
 	
 	
@@ -154,27 +147,33 @@ int main(int argc, char const *argv[])
 
 	if (menor_caminho_dist == local_menor_caminho_dist)
 		MPI_Send(local_melhor_caminho, n, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
-	if (rank == ROOT)
-		MPI_Recv(melhor_caminho, n, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
-
 
 	if (rank == ROOT) {
+		melhor_caminho = (int*)malloc(sizeof(int) * n);
+		MPI_Recv(melhor_caminho, n, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+
 		printf("%ld\n", menor_caminho_dist);
 		printf("0 -> %d : %d\n", melhor_caminho[0], graph[0][melhor_caminho[0]]);
 		for (int i = 1; i < n; i++)
 		{
 			printf("%d -> %d : %d\n", melhor_caminho[i-1], melhor_caminho[i],graph[melhor_caminho[i-1]][melhor_caminho[i]]);
 		}
+
+		free(melhor_caminho);
 	}
 
-
-	MPI_Finalize();
+	free(local_visitados);
+	free(local_melhor_caminho_tmp);
+	free(local_melhor_caminho);
 
 	for (int i = 0; i < n; i++)
 	{
 		free(graph[i]);
 	}
 	free(graph);
-    
+
+	MPI_Finalize();
+
+	
     return 0;
 }
