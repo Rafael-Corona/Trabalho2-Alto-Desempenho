@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <time.h>
 
 #define MAX_DIST 25
 #define ROOT 0
 #define min(a,b) (a) > (b) ? (b) : (a);
-
 
 
 void copia_arr(int* dest, int* src, int n)
@@ -56,7 +56,6 @@ long caminho(int** graph, int* visitados, int* melhor_caminho, const int n, cons
 		return graph[vertice][posicao_inicial];
 	}
 
-	long dist = 0;
 	long min_dist = LONG_MAX;
 	int min_pos = -1;
 	int* melhor_caminho_local = (int*)malloc(sizeof(int) * n);
@@ -94,11 +93,22 @@ long caminho(int** graph, int* visitados, int* melhor_caminho, const int n, cons
 
 int main(int argc, char *argv[])
 {
-    int n = 11, rank, n_proc;
+    int n, rank, n_proc;
+
+	if (argc == 2)
+		n = atoi(argv[1]);
+	else {
+		printf("Número de argumento inválidos. Uso correto: mpirun -np <n_proc> <path of executable> <n_vertices>");
+		return 1;
+	}
+
+
 	int** graph = cria_grafo(n);
 	long menor_caminho_dist;
 	int* melhor_caminho;
 	MPI_Status status;
+
+	time_t t_0 = time(NULL);
 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -108,7 +118,6 @@ int main(int argc, char *argv[])
 	long local_menor_caminho_dist = LONG_MAX;
 	int vertice_inicial = rank*block_size;
 	int vertice_final = vertice_inicial + block_size;
-	int min_pos;
 	long temp_menor_dist = LONG_MAX;
 
 	int* local_visitados = (int*)malloc(sizeof(int) * n);
@@ -124,20 +133,19 @@ int main(int argc, char *argv[])
 		vertice_final = n;
 	}
 
-	for (int i = vertice_inicial; i < vertice_final; i++) {
-		if (i != 0) {
-			local_visitados[i] = 1;
-			local_melhor_caminho_tmp[0] = i;
+	for (int vertice = vertice_inicial; vertice < vertice_final; vertice++) {
+		if (vertice != 0) {
+			local_visitados[vertice] = 1;
+			local_melhor_caminho_tmp[0] = vertice;
 
-			temp_menor_dist = caminho(graph, local_visitados, local_melhor_caminho_tmp, n, i, 1, 0) + graph[0][i];
+			temp_menor_dist = caminho(graph, local_visitados, local_melhor_caminho_tmp, n, vertice, 1, 0) + graph[0][vertice];
 			if(temp_menor_dist < local_menor_caminho_dist) {
 				copia_arr(local_melhor_caminho, local_melhor_caminho_tmp, n);
 						
 				local_menor_caminho_dist = temp_menor_dist;
-				min_pos = i;
-				local_melhor_caminho[0] = i;
+				local_melhor_caminho[0] = vertice;
 			}
-			local_visitados[i] = 0;
+			local_visitados[vertice] = 0;
 		}
 	}
 	
@@ -160,6 +168,9 @@ int main(int argc, char *argv[])
 		}
 
 		free(melhor_caminho);
+		#ifdef TIME
+		printf("%lds\n", time(NULL) - t_0);
+		#endif
 	}
 
 	free(local_visitados);
@@ -172,7 +183,11 @@ int main(int argc, char *argv[])
 	}
 	free(graph);
 
+	
+
 	MPI_Finalize();
+
+	
 
 	
     return 0;
