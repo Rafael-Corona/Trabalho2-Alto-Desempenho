@@ -6,9 +6,7 @@ N_PROC ?= 4
 
 all: build_par build_seq
 	
-setup:
-	./bin/sh setup.sh
-build_par: setup
+build_par:
 	mpicc $(flags) $(par).c -o bin/$(par)
 build_seq:
 	gcc $(flags) $(seq).c -o bin/$(seq)
