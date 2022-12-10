@@ -1,9 +1,11 @@
 // CAD.cpp : Este arquivo contém a função 'main'. A execução do programa começa e termina ali.
 //
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <time.h>
+#include <string.h>
 #define MAX_DIST 25
 
 void copia_arr(int* arr1, int* arr2, int n)
@@ -84,7 +86,7 @@ int main(int argc, char** argv)
 	if (argc == 2)
 		n = atoi(argv[1]);
 	else {
-		printf("Número de argumento inválidos. Uso correto: mpirun -np <n_proc> <path of executable> <n_vertices>");
+		printf("Número de argumento inválidos. Uso correto: <path_to_executable> <n_vertices>");
 		return 1;
 	}
 	
@@ -105,8 +107,20 @@ int main(int argc, char** argv)
 		printf("\n");
 	}
 
-	time_t t_0 = time(NULL);
-
+        #ifdef TIME
+	char filename[255] = "seq";
+	char runs[10], nVertices[15];
+	sprintf(nVertices, "%d",n);
+	strcat(filename, runs);
+	strcat(filename, "-n");
+	strcat(filename, nVertices);    
+	strcat(filename, ".stats");
+	FILE *output_fp = fopen(filename, "a");
+        
+	double start, end;
+        start = omp_get_wtime();	
+	#endif
+	
 	int* visitados = (int*)malloc(sizeof(int) * n);
 	int* melhor_caminho = (int*)malloc(sizeof(int) * n);
 
@@ -126,7 +140,9 @@ int main(int argc, char** argv)
 	}
 
 	#ifdef TIME
-	printf("%lds\n", time(NULL) - t_0);
+	end = omp_get_wtime();
+	fprintf(output_fp,"%lf\n", end - start);
+	fclose(output_fp);
 	#endif
 
 	for (int i = 0; i < n; i++)
