@@ -4,6 +4,7 @@
 #include <string.h>
 #include <limits.h>
 #include <time.h>
+#include <omp.h>
 
 #define MAX_DIST 25
 #define ROOT 0
@@ -108,8 +109,6 @@ int main(int argc, char *argv[])
 	int* melhor_caminho;
 	MPI_Status status;
 
-	time_t t_0 = time(NULL);
-
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &n_proc);
@@ -128,6 +127,22 @@ int main(int argc, char *argv[])
 	memset(local_melhor_caminho, 0, n*sizeof(int));
 
 	local_visitados[0] = 1;
+	
+
+	#ifdef TIME
+	FILE *output_fp;
+	double start, end;
+	char filename[255] = "par";
+	char nVertices[15];
+	if (rank == ROOT){ //processo mestre inicia o cronometro
+		sprintf(nVertices, "%d",n);
+		strcat(filename, "-n");
+		strcat(filename, nVertices);    
+		strcat(filename, ".stats");
+		output_fp = fopen(filename, "a");
+		start = omp_get_wtime();	
+	}
+	#endif
 
 	if (rank == n_proc - 1) {
 		vertice_final = n;
@@ -169,8 +184,10 @@ int main(int argc, char *argv[])
 
 		free(melhor_caminho);
 		#ifdef TIME
-		printf("%lds\n", time(NULL) - t_0);
-		#endif
+		end = omp_get_wtime();
+		fprintf(output_fp,"%lf\n", end - start);
+		fclose(output_fp);	
+		#endif 
 	}
 
 	free(local_visitados);
