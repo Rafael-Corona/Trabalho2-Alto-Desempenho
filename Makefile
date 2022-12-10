@@ -1,6 +1,14 @@
+#Turma: A	Grupo 7
+
+#8504480	Guilherme Alves Lindo
+#11796893 	Luiz Fernando Rabelo
+#11031663 	Marcus Vinicius Medeiros Pará
+#4769989 	Rafael Corona
+#11795526 	Tulio Santana Ramos
+
 par = pcv-par
-seq = CAD
-flags = -Wall  -Wextra -fopenmp
+seq = pcv-seq
+flags = -Wall  -Wextra -fopenmp -std=c11
 N_VERTICES ?= 10
 N_PROC ?= 4
 

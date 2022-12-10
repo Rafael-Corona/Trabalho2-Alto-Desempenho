@@ -1,3 +1,12 @@
+/*Turma: A	Grupo 7
+
+8504480	Guilherme Alves Lindo
+11796893 	Luiz Fernando Rabelo
+11031663 	Marcus Vinicius Medeiros Pará
+4769989 	Rafael Corona
+11795526 	Tulio Santana Ramos
+*/
+
 #include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,11 +15,12 @@
 #include <time.h>
 #include <omp.h>
 
-#define MAX_DIST 25
+// Definição de constantes e função auxiliar para retornar o valor mínimo
+#define MAX_DIST 100
 #define ROOT 0
 #define min(a,b) (a) > (b) ? (b) : (a);
 
-
+// Função auxiliar, para efetuar a cópia de um array "src" para "dest"
 void copia_arr(int* dest, int* src, int n)
 {
 	for (int i = 0; i < n; i++)
@@ -19,6 +29,7 @@ void copia_arr(int* dest, int* src, int n)
 	}
 }
 
+// Função para geração das arestas do grafo
 void funcao_geradora(int** graph, int n)
 {
 	srand(12345);
@@ -31,13 +42,13 @@ void funcao_geradora(int** graph, int n)
 			else
 			{
 				graph[i][j] = INT_MAX/2;
-				//graph[i][j] /= 2;
 			}
 		}
 	}
 	return;
 }
 
+// Função auxiliar para criação do grafo, organizado como uma matriz
 int** cria_grafo(int n) {
 	int** graph = (int**)malloc(sizeof(int*) * n);
 	for (int i = 0; i < n; i++)
@@ -50,6 +61,7 @@ int** cria_grafo(int n) {
 	return graph;
 }
 
+// Função para determinação do caminho percorrido
 long caminho(int** graph, int* visitados, int* melhor_caminho, const int n, const int vertice, const int posicao_caminho, const int posicao_inicial)
 {
 	if (posicao_caminho+1 == n)
@@ -63,12 +75,14 @@ long caminho(int** graph, int* visitados, int* melhor_caminho, const int n, cons
 
 	copia_arr(melhor_caminho_local, melhor_caminho, n);
 
+	// Percorrer + verificação de nós já visitados
 	for (int i = 0; i < n; i++)
 	{
 		if (!visitados[i] && i != vertice)
 		{
 			visitados[i] = 1;
 			
+			// Recursão para nova verificação e comparação para determinar menor distância percorrida
 			long temp = caminho(graph, visitados, melhor_caminho_local, n, i, posicao_caminho + 1, posicao_inicial) + graph[vertice][i];
 			if (temp < min_dist)
 			{
@@ -92,10 +106,12 @@ long caminho(int** graph, int* visitados, int* melhor_caminho, const int n, cons
 	return min_dist;
 }
 
+// Função main do código paralelo
 int main(int argc, char *argv[])
 {
     int n, rank, n_proc;
 
+	// Tratamento de erros para execução
 	if (argc == 2)
 		n = atoi(argv[1]);
 	else {
@@ -103,16 +119,18 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-
+	// Craição do grafo
 	int** graph = cria_grafo(n);
 	long menor_caminho_dist;
 	int* melhor_caminho;
 	MPI_Status status;
 
+	// Inicialização MPI
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &n_proc);
-	
+
+	// Inicialização/Alocação de variável auxiliares
 	int block_size = n/n_proc;
 	long local_menor_caminho_dist = LONG_MAX;
 	int vertice_inicial = rank*block_size;
@@ -128,13 +146,13 @@ int main(int argc, char *argv[])
 
 	local_visitados[0] = 1;
 	
-
+	// Trecho para diretiva "time" -> para coleta do tempo de execução
 	#ifdef TIME
 	FILE *output_fp;
 	double start, end;
 	char filename[255] = "par";
 	char nVertices[15], nProcessors[15];
-	if (rank == ROOT){ //processo mestre inicia o cronometro
+	if (rank == ROOT){ //processo mestre inicia o cronômetro
 		sprintf(nVertices, "%d",n);
 		strcat(filename, "-n");
 		strcat(filename, nVertices);    
@@ -151,6 +169,7 @@ int main(int argc, char *argv[])
 		vertice_final = n;
 	}
 
+	// Percorrer grafo e determinar menor caminho
 	for (int vertice = vertice_inicial; vertice < vertice_final; vertice++) {
 		if (vertice != 0) {
 			local_visitados[vertice] = 1;
@@ -167,13 +186,14 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	
+	// Redução
 	MPI_Reduce(&local_menor_caminho_dist, &menor_caminho_dist, 1, MPI_LONG, MPI_MIN, ROOT, MPI_COMM_WORLD);
 	MPI_Bcast(&menor_caminho_dist, 1, MPI_LONG, ROOT, MPI_COMM_WORLD);
 
 	if (menor_caminho_dist == local_menor_caminho_dist)
 		MPI_Send(local_melhor_caminho, n, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
 
+	// Verificação para apenas 1 impressão, pelo root
 	if (rank == ROOT) {
 		melhor_caminho = (int*)malloc(sizeof(int) * n);
 		MPI_Recv(melhor_caminho, n, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
@@ -193,6 +213,7 @@ int main(int argc, char *argv[])
 		#endif 
 	}
 
+	// Liberação de memória
 	free(local_visitados);
 	free(local_melhor_caminho_tmp);
 	free(local_melhor_caminho);
@@ -202,13 +223,9 @@ int main(int argc, char *argv[])
 		free(graph[i]);
 	}
 	free(graph);
-
 	
-
+	// Finalização MPI
 	MPI_Finalize();
-
-	
-
 	
     return 0;
 }

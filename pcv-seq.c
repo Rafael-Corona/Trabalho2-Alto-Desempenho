@@ -1,13 +1,23 @@
-// CAD.cpp : Este arquivo contém a função 'main'. A execução do programa começa e termina ali.
-//
+/*Turma: A	Grupo 7
+
+8504480	Guilherme Alves Lindo
+11796893 	Luiz Fernando Rabelo
+11031663 	Marcus Vinicius Medeiros Pará
+4769989 	Rafael Corona
+11795526 	Tulio Santana Ramos
+*/
+
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <time.h>
 #include <string.h>
-#define MAX_DIST 25
 
+// Definição de constantes
+#define MAX_DIST 100
+
+// Função auxiliar, para efetuar a cópia de um array "src" para "dest"
 void copia_arr(int* arr1, int* arr2, int n)
 {
 	for (int i = 0; i < n; i++)
@@ -16,6 +26,7 @@ void copia_arr(int* arr1, int* arr2, int n)
 	}
 }
 
+// Função para geração das arestas do grafo
 void funcao_geradora(int** graph, int n)
 {
 	srand(12345);
@@ -28,13 +39,13 @@ void funcao_geradora(int** graph, int n)
 			else
 			{
 				graph[i][j] = INT_MAX/2;
-				//graph[i][j] /= 2;
 			}
 		}
 	}
 	return;
 }
 
+// Função para determinação do caminho percorrido
 long caminho(int ** graph, int* visitados, int* melhor_caminho, const int n, const int pos, const int posicao_caminho, const int posicao_inicial)
 {
 	if (posicao_caminho+1 == n)
@@ -48,12 +59,14 @@ long caminho(int ** graph, int* visitados, int* melhor_caminho, const int n, con
 
 	copia_arr(melhor_caminho_local, melhor_caminho, n);
 
+	// Percorrer + verificação de nós já visitados
 	for (int i = 0; i < n; i++)
 	{
 		if (visitados[i] == 0 && i != pos)
 		{
 			visitados[i] = 1;
-			
+
+			// Recursão para nova verificação e comparação para determinar menor distância percorrida			
 			long temp = caminho(graph, visitados, melhor_caminho_local, n, i, posicao_caminho + 1, posicao_inicial) + graph[pos][i];
 			if (temp < min_dist)
 			{
@@ -78,36 +91,32 @@ long caminho(int ** graph, int* visitados, int* melhor_caminho, const int n, con
 
 }
 
+// Função main do código sequencial
 int main(int argc, char** argv)
 {
 	int n;
 	srand(12345);
 
+	// Tratamento de erros para execução
 	if (argc == 2)
 		n = atoi(argv[1]);
 	else {
 		printf("Número de argumento inválidos. Uso correto: <path_to_executable> <n_vertices>");
 		return 1;
 	}
-	
+
+	// Alocação do grafo
 	int** graph = (int**)malloc(sizeof(int*) * n);
 	for (int i = 0; i < n; i++)
 	{
 		graph[i] = (int*)malloc(sizeof(int) * n);
 	}
 
+	// Atribuição de valores para o grafo
 	funcao_geradora(graph, n);
 
-	for (int i = 0; i < n; i++)
-	{
-		for (int j = 0; j < n; j++)
-		{
-			printf("%d\t",graph[i][j]);
-		}
-		printf("\n");
-	}
-
-        #ifdef TIME
+	// Trecho para diretiva "time" -> para coleta do tempo de execução
+    #ifdef TIME
 	char filename[255] = "seq";
 	char runs[10], nVertices[15];
 	sprintf(nVertices, "%d",n);
@@ -120,7 +129,8 @@ int main(int argc, char** argv)
 	double start, end;
         start = omp_get_wtime();	
 	#endif
-	
+
+	// Alocação e atribuição de valores de variáveis auxiliares
 	int* visitados = (int*)malloc(sizeof(int) * n);
 	int* melhor_caminho = (int*)malloc(sizeof(int) * n);
 
@@ -130,6 +140,7 @@ int main(int argc, char** argv)
 		melhor_caminho[i] = 0;
 	}
 
+	// Impressão dos resultados
 	visitados[0] = 1;
 	printf("%ld\n", caminho(graph, visitados, melhor_caminho, n, 0, 0, 0));
 
@@ -139,12 +150,14 @@ int main(int argc, char** argv)
 		printf("%d -> %d : %d\n", melhor_caminho[i-1], melhor_caminho[i],graph[melhor_caminho[i-1]][melhor_caminho[i]]);
 	}
 
+	// Trecho para diretiva "time" -> para coleta do tempo de execução
 	#ifdef TIME
 	end = omp_get_wtime();
 	fprintf(output_fp,"%lf\n", end - start);
 	fclose(output_fp);
 	#endif
 
+	// Liberação de memória
 	for (int i = 0; i < n; i++)
 	{
 		free(graph[i]);
@@ -153,4 +166,3 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-
