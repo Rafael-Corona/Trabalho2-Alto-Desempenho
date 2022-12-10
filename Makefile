@@ -11,7 +11,7 @@ build_par:
 build_seq:
 	gcc $(flags) $(seq).c -o bin/$(seq)
 run_par: build_par
-	mpirun --oversubscribe -np $(N_PROC) ./bin/$(par) $(N_VERTICES)
+	mpirun -np $(N_PROC) ./bin/$(par) $(N_VERTICES)
 run_seq: build_seq
 	./bin/$(seq) $(N_VERTICES)
 time_par:
