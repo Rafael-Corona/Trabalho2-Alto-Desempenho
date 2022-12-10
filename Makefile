@@ -1,7 +1,7 @@
 par = pcv-par
 seq = CAD
 flags = -Wall  -Wextra -fopenmp
-N_VERTICES ?= 12
+N_VERTICES ?= 10
 N_PROC ?= 4
 
 all: build_par build_seq

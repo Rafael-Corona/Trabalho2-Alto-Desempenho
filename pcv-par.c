@@ -133,11 +133,14 @@ int main(int argc, char *argv[])
 	FILE *output_fp;
 	double start, end;
 	char filename[255] = "par";
-	char nVertices[15];
+	char nVertices[15], nProcessors[15];
 	if (rank == ROOT){ //processo mestre inicia o cronometro
 		sprintf(nVertices, "%d",n);
 		strcat(filename, "-n");
 		strcat(filename, nVertices);    
+		sprintf(nProcessors, "%d",n_proc);
+		strcat(filename, "-np");
+		strcat(filename, nProcessors);    
 		strcat(filename, ".stats");
 		output_fp = fopen(filename, "a");
 		start = omp_get_wtime();	
