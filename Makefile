@@ -1,7 +1,7 @@
 par = pcv-par
 seq = CAD
-flags = -Wall -Werror -Wextra
-N_VERTICES ?= 13
+flags = -Wall  -Wextra -fopenmp
+N_VERTICES ?= 12
 N_PROC ?= 4
 
 all: build_par build_seq
@@ -13,10 +13,12 @@ build_seq:
 run_par: build_par
 	mpirun --oversubscribe -np $(N_PROC) ./bin/$(par) $(N_VERTICES)
 run_seq: build_seq
-	./bin/$(seq)
+	./bin/$(seq) $(N_VERTICES)
 time_par:
 	mpicc -D TIME $(flags) $(par).c -o bin/$(par)_time
-	mpirun --oversubscribe -np $(N_PROC) ./bin/$(par) $(N_VERTICES)
+	mpirun --oversubscribe -np $(N_PROC) ./bin/$(par)_time $(N_VERTICES)
 time_seq:
 	gcc -D TIME $(flags) $(seq).c -o bin/$(seq)_time
 	./bin/$(seq)_time $(N_VERTICES)
+clean:
+	rm *.stats
